@@ -41,6 +41,8 @@ def start_node(host="0.0.0.0", port=6001):
             conn, addr = node_socket.accept()
         except:
             print("Failed to accept connection")
+            print(f"conn: {conn}")
+            print(f"addr: {addr}")
             return
 
         conn_thread = threading.Thread(target=handle_connection, kwargs={'conn': conn, 'addr': addr})
@@ -54,10 +56,16 @@ def handle_connection(conn, addr):
     while flg_connection:
         try:
             rec_message = conn.recv(1024).decode()
+            if not rec_message:
+                break
+
             print(f"RCVD: {rec_message}")
             rec_message = json.loads(rec_message)
-        except:
+        except json.JSONDecodeError:
             print("Error receiving/parsing the message")
+            continue
+        except Exception as e:
+            print(f"Error receiving/parsing the message: {e}")
             raise
 
         if "key" in rec_message:

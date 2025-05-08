@@ -23,11 +23,11 @@ def udp_listener(port: int = 6000):
             message_json = json.loads(message)
             ip_address = message_json["ip_address"]
             username = message_json["username"]
-            if ip_address not in peers:
+            if addr[0] not in peers:
                 peers[message_json["ip_address"]] = (username, time.time_ns())
-                print(f"{username} is online.")
+                print(f"{username} ({message_json["ip_address"]}) is online.")
             else:
-                peers[message_json["ip_address"]] = (username, time.time_ns())
+                peers[message_json["ip_address"]] = (peers[message_json["ip_address"]][0], time.time_ns())
             
             with open("peers.json", "w") as f:
                 json.dump(peers, f, indent=3)
