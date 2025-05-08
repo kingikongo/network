@@ -245,6 +245,14 @@ def chat():
         if 'node_socket' in locals() and isinstance(node_socket, socket.socket) and node_socket.fileno() != -1:
              node_socket.close()
 
+def log_message(to_username: str, to_ip: str, message: str, status: str):
+    """Logs a sent message to the history.jsonl file."""
+    with open("history.jsonl", "a") as f:
+        # Log the message from the perspective of the initiator (the sender)
+        # Include the 'to' information and the status ('SENT')
+        data = {"to": to_username, "ip": to_ip, "message": message, "epoch_ns": time.time_ns(), "status": status}
+        f.write(f"{json.dumps(data)}\n")
+
 def history():
     if not os.path.exists("history.jsonl"):
         print("No chat history found.")
