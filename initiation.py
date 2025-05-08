@@ -209,34 +209,36 @@ def chat():
                 return 
 
         print(f"Starting chat with {peer_username}. Type 'quit' to end.")
-        while True:
-            try: 
-                chat_message = input("You: ")
-                if chat_message.lower() == 'quit':
-                    break 
-                if is_secure and shared_secret is not None:
-                    message_encrypted = encrypt(chat_message, shared_secret)
-                    message_encrypted_b64 = base64.b64encode(message_encrypted).decode()
-                    data_to_send = json.dumps({"username": user["username"], "encrypted message": message_encrypted_b64})
-                    print(f"Sending secure message: {data_to_send}")
-                    node_socket.send(data_to_send.encode())
-                    log_message(peer_username, peer_ip_address, chat_message, "SENT")
+        try: 
+            chat_message = input("You: ")
+            if chat_message.lower() == 'quit':
+                print("Chat session ended")
+                node_socket.close()
+                return
+            if is_secure and shared_secret is not None:
+                message_encrypted = encrypt(chat_message, shared_secret)
+                message_encrypted_b64 = base64.b64encode(message_encrypted).decode()
+                data_to_send = json.dumps({"username": user["username"], "encrypted message": message_encrypted_b64})
+                print(f"Sending secure message: {data_to_send}")
+                node_socket.send(data_to_send.encode())
+                log_message(peer_username, peer_ip_address, chat_message, "SENT")
 
-                elif not is_secure:
-                    data_to_send = json.dumps({"username": user["username"], "unencrypted_message": chat_message})
-                    node_socket.send(data_to_send.encode())
-                    log_message(peer_username, peer_ip_address, chat_message, "SENT")
+            elif not is_secure:
+                data_to_send = json.dumps({"username": user["username"], "unencrypted_message": chat_message})
+                node_socket.send(data_to_send.encode())
+                log_message(peer_username, peer_ip_address, chat_message, "SENT")
 
-                else:
-                    print("Error: Secure connection not established.")
-                    break 
+            else:
+                print("Error: Secure connection not established.")
 
-            except Exception as e:
-                print(f"Error sending message: {e}")
-                break 
+        except Exception as e:
+            print(f"Error sending message: {e}")
+        finally:
+            print("Chat session ended")
+            node_socket.close()
 
-        print("Chat session ended.")
-        node_socket.close()
+#        print("Chat session ended.")
+#        node_socket.close()
 
     except Exception as e:
         print(f"An unexpected error occurred during chat initiation: {e}")
