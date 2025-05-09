@@ -4,7 +4,8 @@ import threading
 import time
 import base64
 
-from pyDes import des, PAD_PKCS5
+
+from pyDes import des, triple_des, PAD_PKCS5
 import random
 
 P = 19  # Prime number
@@ -18,16 +19,41 @@ def generate_shared_secret(public_key, private_key, p):
     shared_secret = (public_key ** private_key) % p
     return shared_secret
 
+#def encrypt(plaintext, key):
+#    k = des(key.to_bytes(8, 'big'), padmode=PAD_PKCS5)
+#    encrypted_text = k.encrypt(plaintext)
+#    return encrypted_text
+#
+#def decrypt(ciphertext, key):
+#    k = des(key.to_bytes(8, 'big'), padmode=PAD_PKCS5)
+#    decrypted_text = k.decrypt(ciphertext)
+#    return decrypted_text
+
 def encrypt(plaintext, key):
-    k = des(key.to_bytes(8, 'big'), padmode=PAD_PKCS5)
+
+    key_bytes = key.to_bytes(8, 'big')
+    padded_key = key_bytes.ljust(24, b'\0')
+    print(f"DEBUG (Responder): Padded key bytes: {padded_key}") # Add this line
+    k = triple_des(padded_key, padmode=PAD_PKCS5) 
+
+    if isinstance(plaintext, str):
+        plaintext = plaintext.encode()
+
     encrypted_text = k.encrypt(plaintext)
     return encrypted_text
 
 def decrypt(ciphertext, key):
-    k = des(key.to_bytes(8, 'big'), padmode=PAD_PKCS5)
-    decrypted_text = k.decrypt(ciphertext)
-    return decrypted_text
 
+    try:
+        key_bytes = key.to_bytes(8, 'big')
+        padded_key = key_bytes.ljust(24, b'\0')
+        print(f"DEBUG (Responder): Padded key bytes (hex): {padded_key.hex()}") # Add this line (print as hex for clarity)
+        k = triple_des(padded_key, padmode=PAD_PKCS5)
+
+        decrypted_text = k.decrypt(ciphertext)
+        return decrypted_text
+    except Exception as e:
+        print(f"Error in decrypt function: {e}")
 
 def start_node(host="0.0.0.0", port=6001):
     node_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -78,14 +104,18 @@ def handle_connection(conn, addr):
             peer_public_key = rec_message["key"]
             # generate shared secrect
             shared_secret = generate_shared_secret(peer_public_key, self_private_key, P)
+            print(f"DEBUG (Responder): Calculated shared_secret: {shared_secret}") 
 
             message = json.dumps({"key": self_public_key})
             print(f"SENDING PUB KEY: {message}")
             conn.send(message.encode())
 
         elif "encrypted_message" in rec_message:
-            # decrypt and display the message
             received_message_encrypted_bytes = base64.b64decode(rec_message["encrypted_message"])
+            decrypted_text_bytes = decrypt(received_message_encrypted_bytes, shared_secret)
+
+            print(f"DEBUG (Responder Handle): Raw decrypted bytes (hex): {decrypted_text_bytes.hex()}") # Debug print
+            print(f"DEBUG (Responder Handle): Attempting to decode raw bytes...") 
             message = decrypt(received_message_encrypted_bytes, shared_secret).decode()
             print(f"[{rec_message['username']}]: {message}\n")
             dump_message(from_username=rec_message["username"], from_ip=addr[0], message=message, epoch_ns=time.time_ns())
@@ -100,7 +130,7 @@ def handle_connection(conn, addr):
 
 def dump_message(from_username: str, from_ip: str, message: str, epoch_ns: int):
     with open("history.jsonl", "a") as f:
-        data = {"from": from_username, "ip": from_ip, "message": message, "epoch_ns": epoch_ns}
+        data = {"from": from_username, "ip": from_ip, "message": message, "epoch_ns": epoch_ns, "status": "SENT"} 
         f.write(f"{json.dumps(data)}\n")
 
 if __name__ == "__main__":

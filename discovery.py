@@ -21,7 +21,6 @@ def udp_listener(port: int = 6000):
             data, addr = sock.recvfrom(1024)  # Buffer size is 1024 bytes
             message = data.decode('utf-8')
             message_json = json.loads(message)
-            ip_address = message_json["ip_address"]
             username = message_json["username"]
             if addr[0] not in peers:
                 peers[message_json["ip_address"]] = (username, time.time_ns())

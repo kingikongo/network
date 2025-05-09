@@ -9,8 +9,8 @@ def get_ip_address():
         temp_sock.connect(('8.8.8.8', 80))
         ip_address = temp_sock.getsockname()[0]
     except Exception as e:
-       # ip_address = '192.168.1.255'
-        ip_address = '127.0.0.1'
+        ip_address = '192.168.1.255'
+       #ip_address = '127.0.0.1'
 
     finally:
         temp_sock.close()
@@ -36,7 +36,7 @@ def service_announcer(username: str, port: int = 6000):
         while True:
 
             sock.sendto(message_bytes, ('<broadcast>', port))
-            print(f"'{message}': broadcasted message: SUCCESSFUL")
+            print(f"'{message}': broadcast SUCCESSFUL")
 
             time.sleep(8)
     except Exception as e:
